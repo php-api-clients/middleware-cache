@@ -4,32 +4,31 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "edf1e770de54bd933b310094ee012704",
-    "content-hash": "02286cd6e7cd50c189342829afbd5976",
+    "hash": "00c2b3690ef80d77fb3349a5944e2191",
+    "content-hash": "e1c3d75b0df9fd9eaa6e724bed8dad44",
     "packages": [
         {
-            "name": "api-clients/events",
+            "name": "api-clients/middleware",
             "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "https://github.com/php-api-clients/events.git",
-                "reference": "3073760f3231e3f133a1325a487ea303632668d6"
+                "url": "https://github.com/php-api-clients/middleware.git",
+                "reference": "a6456132d834f5d279d245512b4ab4d17ccb72fd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-api-clients/events/zipball/3073760f3231e3f133a1325a487ea303632668d6",
-                "reference": "3073760f3231e3f133a1325a487ea303632668d6",
+                "url": "https://api.github.com/repos/php-api-clients/middleware/zipball/a6456132d834f5d279d245512b4ab4d17ccb72fd",
+                "reference": "a6456132d834f5d279d245512b4ab4d17ccb72fd",
                 "shasum": ""
             },
             "require": {
-                "api-clients/test-utilities": "dev-master",
-                "league/event": "^2.1",
                 "php": "^7.0",
-                "wyrihaximus/tactician-command-handler-mapper": "^1.0"
+                "psr/http-message": "^1.0"
             },
             "require-dev": {
+                "api-clients/test-utilities": "dev-master",
+                "clue/block-react": "^1.1",
                 "humbug/humbug": "1.0.0-alpha2",
-                "phake/phake": "^2.3",
                 "phpspec/prophecy": "^1.6",
                 "phpunit/phpunit": "^5.2.3",
                 "squizlabs/php_codesniffer": "^2.6"
@@ -37,7 +36,7 @@
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "ApiClients\\Foundation\\Events\\": "src/"
+                    "ApiClients\\Foundation\\Middleware\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -50,35 +49,118 @@
                     "email": "ceesjank@gmail.com"
                 }
             ],
-            "time": "2016-10-09 00:00:03"
+            "time": "2016-10-20 05:42:02"
         },
         {
-            "name": "api-clients/resource",
-            "version": "dev-master",
+            "name": "psr/http-message",
+            "version": "1.0.1",
             "source": {
                 "type": "git",
-                "url": "https://github.com/php-api-clients/resource.git",
-                "reference": "608f91ece92946dcb0a904c8cccef4458775356c"
+                "url": "https://github.com/php-fig/http-message.git",
+                "reference": "f6561bf28d520154e4b0ec72be95418abe6d9363"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-api-clients/resource/zipball/608f91ece92946dcb0a904c8cccef4458775356c",
-                "reference": "608f91ece92946dcb0a904c8cccef4458775356c",
+                "url": "https://api.github.com/repos/php-fig/http-message/zipball/f6561bf28d520154e4b0ec72be95418abe6d9363",
+                "reference": "f6561bf28d520154e4b0ec72be95418abe6d9363",
                 "shasum": ""
             },
             "require": {
-                "league/tactician": "^1.0",
-                "php": "^7.0"
+                "php": ">=5.3.0"
             },
-            "require-dev": {
-                "phake/phake": "^2.3",
-                "phpunit/phpunit": "^5.2.3",
-                "squizlabs/php_codesniffer": "^2.6"
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\Http\\Message\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "http://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interface for HTTP messages",
+            "homepage": "https://github.com/php-fig/http-message",
+            "keywords": [
+                "http",
+                "http-message",
+                "psr",
+                "psr-7",
+                "request",
+                "response"
+            ],
+            "time": "2016-08-06 14:39:51"
+        },
+        {
+            "name": "react/cache",
+            "version": "v0.4.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/reactphp/cache.git",
+                "reference": "558f614891341b1d817a8cdf9a358948ec49638f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/reactphp/cache/zipball/558f614891341b1d817a8cdf9a358948ec49638f",
+                "reference": "558f614891341b1d817a8cdf9a358948ec49638f",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0",
+                "react/promise": "~2.0|~1.1"
             },
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "ApiClients\\Foundation\\Resource\\": "src/"
+                    "React\\Cache\\": "src\\"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Async caching.",
+            "keywords": [
+                "cache"
+            ],
+            "time": "2016-02-25 18:17:16"
+        },
+        {
+            "name": "react/promise",
+            "version": "v2.4.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/reactphp/promise.git",
+                "reference": "8025426794f1944de806618671d4fa476dc7626f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/reactphp/promise/zipball/8025426794f1944de806618671d4fa476dc7626f",
+                "reference": "8025426794f1944de806618671d4fa476dc7626f",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.4.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.0-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "React\\Promise\\": "src/"
                 },
                 "files": [
                     "src/functions_include.php"
@@ -90,12 +172,15 @@
             ],
             "authors": [
                 {
-                    "name": "Cees-Jan Kiewiet",
-                    "email": "ceesjank@gmail.com"
+                    "name": "Jan Sorgalla",
+                    "email": "jsorgalla@gmail.com"
                 }
             ],
-            "time": "2016-10-02 17:08:56"
-        },
+            "description": "A lightweight implementation of CommonJS Promises/A for PHP",
+            "time": "2016-05-03 17:50:52"
+        }
+    ],
+    "packages-dev": [
         {
             "name": "api-clients/test-utilities",
             "version": "dev-master",
@@ -1744,56 +1829,6 @@
             "time": "2016-10-09 07:01:45"
         },
         {
-            "name": "psr/http-message",
-            "version": "1.0.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/php-fig/http-message.git",
-                "reference": "f6561bf28d520154e4b0ec72be95418abe6d9363"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/php-fig/http-message/zipball/f6561bf28d520154e4b0ec72be95418abe6d9363",
-                "reference": "f6561bf28d520154e4b0ec72be95418abe6d9363",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.0"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "1.0.x-dev"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Psr\\Http\\Message\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "PHP-FIG",
-                    "homepage": "http://www.php-fig.org/"
-                }
-            ],
-            "description": "Common interface for HTTP messages",
-            "homepage": "https://github.com/php-fig/http-message",
-            "keywords": [
-                "http",
-                "http-message",
-                "psr",
-                "psr-7",
-                "request",
-                "response"
-            ],
-            "time": "2016-08-06 14:39:51"
-        },
-        {
             "name": "psr/log",
             "version": "1.0.2",
             "source": {
@@ -1839,40 +1874,6 @@
                 "psr-3"
             ],
             "time": "2016-10-10 12:19:37"
-        },
-        {
-            "name": "react/cache",
-            "version": "v0.4.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/reactphp/cache.git",
-                "reference": "558f614891341b1d817a8cdf9a358948ec49638f"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/cache/zipball/558f614891341b1d817a8cdf9a358948ec49638f",
-                "reference": "558f614891341b1d817a8cdf9a358948ec49638f",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.3.0",
-                "react/promise": "~2.0|~1.1"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "React\\Cache\\": "src\\"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Async caching.",
-            "keywords": [
-                "cache"
-            ],
-            "time": "2016-02-25 18:17:16"
         },
         {
             "name": "react/dns",
@@ -1994,50 +1995,6 @@
                 "http"
             ],
             "time": "2016-10-06 13:08:24"
-        },
-        {
-            "name": "react/promise",
-            "version": "v2.4.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/reactphp/promise.git",
-                "reference": "8025426794f1944de806618671d4fa476dc7626f"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/promise/zipball/8025426794f1944de806618671d4fa476dc7626f",
-                "reference": "8025426794f1944de806618671d4fa476dc7626f",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=5.4.0"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "2.0-dev"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "React\\Promise\\": "src/"
-                },
-                "files": [
-                    "src/functions_include.php"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Jan Sorgalla",
-                    "email": "jsorgalla@gmail.com"
-                }
-            ],
-            "description": "A lightweight implementation of CommonJS Promises/A for PHP",
-            "time": "2016-05-03 17:50:52"
         },
         {
             "name": "react/promise-timer",
@@ -3487,12 +3444,10 @@
             "time": "2016-03-05 20:23:05"
         }
     ],
-    "packages-dev": [],
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "api-clients/events": 20,
-        "api-clients/resource": 20,
+        "api-clients/middleware": 20,
         "api-clients/test-utilities": 20,
         "humbug/humbug": 15
     },

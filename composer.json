@@ -9,9 +9,11 @@
   ],
   "require": {
     "php": "^7.0",
+    "api-clients/middleware": "dev-master",
     "react/cache": "^0.4.1"
   },
   "require-dev": {
+    "api-clients/test-utilities": "dev-master",
     "humbug/humbug": "1.0.0-alpha2",
     "phpspec/prophecy": "^1.6",
     "phpunit/phpunit": "^5.2.3",
