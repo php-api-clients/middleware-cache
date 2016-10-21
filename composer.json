@@ -10,6 +10,7 @@
   "require": {
     "php": "^7.0",
     "api-clients/middleware": "dev-master",
+    "guzzlehttp/psr7": "^1.3",
     "react/cache": "^0.4.1"
   },
   "require-dev": {
