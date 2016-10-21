@@ -123,7 +123,7 @@ class CacheMiddlewareTest extends TestCase
         $middleware = new CacheMiddleware($cache->reveal());
 
         $response = await(
-            $middleware->pre($requestInstance)->otherwise(function (ResponseInterface $response) {
+            $middleware->pre($requestInstance)->then(null, function (ResponseInterface $response) {
                 return resolve($response);
             }),
             Factory::create()
