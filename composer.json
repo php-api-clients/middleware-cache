@@ -9,16 +9,12 @@
   ],
   "require": {
     "php": "^7.0",
-    "api-clients/middleware": "dev-master",
+    "api-clients/middleware": "^1.0",
     "guzzlehttp/psr7": "^1.3",
     "react/cache": "^0.4.1"
   },
   "require-dev": {
-    "api-clients/test-utilities": "dev-master",
-    "humbug/humbug": "1.0.0-alpha2",
-    "phpspec/prophecy": "^1.6",
-    "phpunit/phpunit": "^5.2.3",
-    "squizlabs/php_codesniffer": "^2.6"
+    "api-clients/test-utilities": "^2.0"
   },
   "suggest": {
     "wyrihaximus/react-cache-filesystem": "Filesystem cache",
@@ -26,12 +22,12 @@
   },
   "autoload": {
     "psr-4": {
-      "ApiClients\\Foundation\\Cache\\": "src/"
+      "ApiClients\\Middleware\\Cache\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "ApiClients\\Tests\\Foundation\\Cache\\": "tests/"
+      "ApiClients\\Tests\\Middleware\\Cache\\": "tests/"
     }
   },
   "config": {
@@ -47,14 +43,9 @@
       "@ensure-installed",
       "phpunit --colors=always -c phpunit.xml.dist --coverage-text --coverage-html covHtml"
     ],
-    "mutation": [
-      "@ensure-installed",
-      "if [ `php -m | grep xdebug | wc -l` -gt 0 ]; then humbug --ansi --incremental; fi"
-    ],
     "qa-all": [
       "@cs",
-      "@unit",
-      "@mutation"
+      "@unit"
     ],
     "qa-windows": [
       "@cs",

@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace ApiClients\Tests\Foundation\Cache\Middleware;
+namespace ApiClients\Tests\Middleware\Cache;
 
-use ApiClients\Foundation\Cache\Middleware\CacheMiddleware;
+use ApiClients\Middleware\Cache\CacheMiddleware;
 use ApiClients\Tools\TestUtilities\TestCase;
 use Prophecy\Argument;
 use Psr\Http\Message\RequestInterface;

@@ -1,7 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace ApiClients\Foundation\Cache\Middleware;
+namespace ApiClients\Middleware\Cache;
 
+use ApiClients\Foundation\Middleware\DefaultPriorityTrait;
 use ApiClients\Foundation\Middleware\MiddlewareInterface;
 use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\RequestInterface;
@@ -13,6 +14,8 @@ use function React\Promise\resolve;
 
 class CacheMiddleware implements MiddlewareInterface
 {
+    use DefaultPriorityTrait;
+
     /**
      * @var CacheInterface
      */
