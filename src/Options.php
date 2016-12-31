@@ -2,8 +2,11 @@
 
 namespace ApiClients\Middleware\Cache;
 
+use React\Cache\CacheInterface;
+
 final class Options
 {
-    const STRATEGY = StrategyInterface::class;
+    const CACHE       = CacheInterface::class;
+    const STRATEGY    = StrategyInterface::class;
     const DEFAULT_TTL = 'default-ttl';
 }
