@@ -3,6 +3,8 @@
 namespace ApiClients\Tests\Middleware\Cache;
 
 use ApiClients\Middleware\Cache\CacheMiddleware;
+use ApiClients\Middleware\Cache\Options;
+use ApiClients\Middleware\Cache\Strategy\Always;
 use ApiClients\Tools\TestUtilities\TestCase;
 use Prophecy\Argument;
 use Psr\Http\Message\RequestInterface;
@@ -27,8 +29,8 @@ class CacheMiddlewareTest extends TestCase
         yield ['LOLCAT'];
         yield [time()];
         yield [mt_rand()];
-        yield [mt_rand(0, time())];
-        yield [mt_rand(time(), time() * time())];
+        yield [random_int(0, time())];
+        yield [random_int(time(), time() * time())];
     }
 
     /**
@@ -36,6 +38,12 @@ class CacheMiddlewareTest extends TestCase
      */
     public function testNotGet(string $method)
     {
+        $options = [
+            CacheMiddleware::class => [
+                Options::STRATEGY => new Always(),
+            ],
+        ];
+
         $request = $this->prophesize(RequestInterface::class);
         $request->getMethod()->shouldBeCalled()->willReturn($method);
 
@@ -47,7 +55,7 @@ class CacheMiddlewareTest extends TestCase
         $this->assertSame(
             $requestInstance,
             await(
-                $middleware->pre($requestInstance),
+                $middleware->pre($requestInstance, $options),
                 Factory::create()
             )
         );
