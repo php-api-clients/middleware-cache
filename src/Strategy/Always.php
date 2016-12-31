@@ -8,6 +8,8 @@ use Psr\Http\Message\ResponseInterface;
 
 final class Always implements StrategyInterface
 {
+    const ALWAYS_TTL = 300;
+
     public function preCheck(RequestInterface $request): bool
     {
         return true;
@@ -18,8 +20,11 @@ final class Always implements StrategyInterface
         return true;
     }
 
-    public function determineTtl(RequestInterface $request, ResponseInterface $response): int
-    {
-        return 0;
+    public function determineTtl(
+        RequestInterface $request,
+        ResponseInterface $response,
+        int $default = self::ALWAYS_TTL
+    ): int {
+        return $default;
     }
 }
