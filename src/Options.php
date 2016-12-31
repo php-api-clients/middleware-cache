@@ -5,4 +5,5 @@ namespace ApiClients\Middleware\Cache;
 final class Options
 {
     const STRATEGY = StrategyInterface::class;
+    const DEFAULT_TTL = 'default-ttl';
 }
