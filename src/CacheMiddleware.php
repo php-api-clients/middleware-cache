@@ -11,12 +11,11 @@ use Psr\Http\Message\UriInterface;
 use React\Cache\CacheInterface;
 use React\Promise\CancellablePromiseInterface;
 use React\Promise\PromiseInterface;
-use function React\Promise\resolve;
-use React\Stream\BufferedSink;
-use React\Stream\ReadableStreamInterface;
 use RingCentral\Psr7\BufferStream;
+use function React\Promise\reject;
+use function React\Promise\resolve;
 
-class CacheMiddleware implements MiddlewareInterface
+final class CacheMiddleware implements MiddlewareInterface
 {
     use DefaultPriorityTrait;
 
@@ -46,25 +45,18 @@ class CacheMiddleware implements MiddlewareInterface
     private $strategy;
 
     /**
-     * @param CacheInterface$cache
-     */
-    public function __construct(CacheInterface $cache)
-    {
-        $this->cache = $cache;
-    }
-
-    /**
      * @param RequestInterface $request
      * @param array $options
      * @return CancellablePromiseInterface
      */
     public function pre(RequestInterface $request, array $options = []): CancellablePromiseInterface
     {
-        if (!isset($options[self::class][Options::STRATEGY])) {
+        if (!isset($options[self::class][Options::CACHE]) || !isset($options[self::class][Options::STRATEGY])) {
             return resolve($request);
         }
+        $this->cache = $options[self::class][Options::CACHE];
         $this->strategy = $options[self::class][Options::STRATEGY];
-        if (!($this->strategy instanceof StrategyInterface)) {
+        if (!($this->cache instanceof CacheInterface) || !($this->strategy instanceof StrategyInterface)) {
             return resolve($request);
         }
 
@@ -76,10 +68,14 @@ class CacheMiddleware implements MiddlewareInterface
 
         $this->key = $this->determineCacheKey($request->getUri());
         return $this->cache->get($this->key)->then(function (string $document) {
-            return resolve(
-                $this->buildResponse($document)
-            );
-        }, function () use ($request) {
+            $document = json_decode($document, true);
+
+            if ($document['expires_at'] > time()) {
+                return resolve($this->buildResponse($document));
+            }
+
+            return reject();
+        })->otherwise(function () use ($request) {
             if ($this->strategy->preCheck($request)) {
                 $this->store = true;
             }
@@ -89,12 +85,11 @@ class CacheMiddleware implements MiddlewareInterface
     }
 
     /**
-     * @param string $document
+     * @param array $document
      * @return Response
      */
-    protected function buildResponse(string $document): Response
+    protected function buildResponse(array $document): Response
     {
-        $document = json_decode($document, true);
         return new Response(
             $document['status_code'],
             $document['headers'],
@@ -111,7 +106,7 @@ class CacheMiddleware implements MiddlewareInterface
      */
     public function post(ResponseInterface $response, array $options = []): CancellablePromiseInterface
     {
-        if (!($this->strategy instanceof StrategyInterface)) {
+        if (!($this->cache instanceof CacheInterface) || !($this->strategy instanceof StrategyInterface)) {
             return resolve($response);
         }
 
@@ -148,6 +143,8 @@ class CacheMiddleware implements MiddlewareInterface
                     $response->getReasonPhrase()
                 )
             );
+        }, function () use ($response) {
+            return resolve($response);
         });
     }
 
@@ -181,16 +178,18 @@ class CacheMiddleware implements MiddlewareInterface
         return preg_replace('#/+#', '/', $string);
     }
 
+    /**
+     * Get the body, but only if  the body has been buffered in already
+     *
+     * @param ResponseInterface $response
+     * @return PromiseInterface
+     */
     protected function getBody(ResponseInterface $response): PromiseInterface
     {
         if ($response->getBody() instanceof BufferStream) {
             return resolve($response->getBody()->getContents());
         }
 
-        if ($response->getBody() instanceof ReadableStreamInterface) {
-            return BufferedSink::createPromise($response->getBody());
-        }
-
-        throw new \Exception('Can\'t get body yet');
+        return reject();
     }
 }
