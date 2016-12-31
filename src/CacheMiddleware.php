@@ -10,7 +10,11 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use React\Cache\CacheInterface;
 use React\Promise\CancellablePromiseInterface;
+use React\Promise\PromiseInterface;
 use function React\Promise\resolve;
+use React\Stream\BufferedSink;
+use React\Stream\ReadableStreamInterface;
+use RingCentral\Psr7\BufferStream;
 
 class CacheMiddleware implements MiddlewareInterface
 {
@@ -27,6 +31,21 @@ class CacheMiddleware implements MiddlewareInterface
     private $key;
 
     /**
+     * @var RequestInterface
+     */
+    private $request;
+
+    /**
+     * @var bool
+     */
+    private $store = false;
+
+    /**
+     * @var StrategyInterface
+     */
+    private $strategy;
+
+    /**
      * @param CacheInterface$cache
      */
     public function __construct(CacheInterface $cache)
@@ -41,9 +60,19 @@ class CacheMiddleware implements MiddlewareInterface
      */
     public function pre(RequestInterface $request, array $options = []): CancellablePromiseInterface
     {
+        if (!isset($options[self::class][Options::STRATEGY])) {
+            return resolve($request);
+        }
+        $this->strategy = $options[self::class][Options::STRATEGY];
+        if (!($this->strategy instanceof StrategyInterface)) {
+            return resolve($request);
+        }
+
         if ($request->getMethod() !== 'GET') {
             return resolve($request);
         }
+
+        $this->request = $request;
 
         $this->key = $this->determineCacheKey($request->getUri());
         return $this->cache->get($this->key)->then(function (string $document) {
@@ -51,6 +80,10 @@ class CacheMiddleware implements MiddlewareInterface
                 $this->buildResponse($document)
             );
         }, function () use ($request) {
+            if ($this->strategy->preCheck($request)) {
+                $this->store = true;
+            }
+
             return resolve($request);
         });
     }
@@ -78,31 +111,44 @@ class CacheMiddleware implements MiddlewareInterface
      */
     public function post(ResponseInterface $response, array $options = []): CancellablePromiseInterface
     {
+        if (!($this->strategy instanceof StrategyInterface)) {
+            return resolve($response);
+        }
+
         if (!is_string($this->key)) {
             return resolve($response);
         }
 
-        $contents = (string)$response->getBody();
+        if ($this->strategy->postCheck($response)) {
+            $this->store = true;
+        }
 
-        $document = [
-            'body' => $contents,
-            'headers' => $response->getHeaders(),
-            'protocol_version' => $response->getProtocolVersion(),
-            'reason_phrase' => $response->getReasonPhrase(),
-            'status_code' => $response->getStatusCode(),
-        ];
+        if (!$this->store) {
+            return resolve($response);
+        }
 
-        $this->cache->set($this->key, json_encode($document));
+        return $this->getBody($response)->then(function (string $contents) use ($response) {
+            $document = [
+                'expires_at' => time() + $this->strategy->determineTtl($this->request, $response),
+                'body' => $contents,
+                'headers' => $response->getHeaders(),
+                'protocol_version' => $response->getProtocolVersion(),
+                'reason_phrase' => $response->getReasonPhrase(),
+                'status_code' => $response->getStatusCode(),
+            ];
 
-        return resolve(
-            new Response(
-                $response->getStatusCode(),
-                $response->getHeaders(),
-                $contents,
-                $response->getProtocolVersion(),
-                $response->getReasonPhrase()
-            )
-        );
+            $this->cache->set($this->key, json_encode($document));
+
+            return resolve(
+                new Response(
+                    $response->getStatusCode(),
+                    $response->getHeaders(),
+                    $contents,
+                    $response->getProtocolVersion(),
+                    $response->getReasonPhrase()
+                )
+            );
+        });
     }
 
 
@@ -133,5 +179,18 @@ class CacheMiddleware implements MiddlewareInterface
     protected function stripExtraSlashes(string $string): string
     {
         return preg_replace('#/+#', '/', $string);
+    }
+
+    protected function getBody(ResponseInterface $response): PromiseInterface
+    {
+        if ($response->getBody() instanceof BufferStream) {
+            return resolve($response->getBody()->getContents());
+        }
+
+        if ($response->getBody() instanceof ReadableStreamInterface) {
+            return BufferedSink::createPromise($response->getBody());
+        }
+
+        throw new \Exception('Can\'t get body yet');
     }
 }
