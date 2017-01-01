@@ -9,17 +9,13 @@ use Psr\Http\Message\ResponseInterface;
 
 final class AlwaysTest extends TestCase
 {
-    public function testPreCheck()
+    public function testDecide()
     {
         self::assertTrue(
-            (new Always())->preCheck($this->prophesize(RequestInterface::class)->reveal())
-        );
-    }
-
-    public function testPostCheck()
-    {
-        self::assertTrue(
-            (new Always())->postCheck($this->prophesize(ResponseInterface::class)->reveal())
+            (new Always())->decide(
+                $this->prophesize(RequestInterface::class)->reveal(),
+                $this->prophesize(ResponseInterface::class)->reveal()
+            )
         );
     }
 

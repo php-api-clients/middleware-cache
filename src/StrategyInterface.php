@@ -10,20 +10,13 @@ interface StrategyInterface
     const DEFAULT_TTL = 0;
 
     /**
-     * Check whether to store to cache based on the request
+     * Determine whether to store to cache based on the request & response
      *
      * @param RequestInterface $request
-     * @return bool
-     */
-    public function preCheck(RequestInterface $request): bool;
-
-    /**
-     * Check whether to store to cache based on the response
-     *
      * @param ResponseInterface $response
      * @return bool
      */
-    public function postCheck(ResponseInterface $response): bool;
+    public function decide(RequestInterface $request, ResponseInterface $response): bool;
 
     /**
      * Determine what the TTL for the cache entry should be based on the request and response

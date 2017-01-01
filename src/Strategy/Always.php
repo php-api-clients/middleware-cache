@@ -10,12 +10,7 @@ final class Always implements StrategyInterface
 {
     const ALWAYS_TTL = 300;
 
-    public function preCheck(RequestInterface $request): bool
-    {
-        return true;
-    }
-
-    public function postCheck(ResponseInterface $response): bool
+    public function decide(RequestInterface $request, ResponseInterface $response): bool
     {
         return true;
     }
