@@ -9,4 +9,5 @@ final class Options
     const CACHE       = CacheInterface::class;
     const STRATEGY    = StrategyInterface::class;
     const DEFAULT_TTL = 'default-ttl';
+    const GLUE        = 'glue';
 }
