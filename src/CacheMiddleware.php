@@ -74,6 +74,7 @@ final class CacheMiddleware implements MiddlewareInterface
             $document = Document::createFromString($json);
 
             if ($document->hasExpired()) {
+                $this->cache->remove($this->key);
                 return resolve($this->request);
             }
 

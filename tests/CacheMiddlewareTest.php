@@ -124,6 +124,7 @@ final class CacheMiddlewareTest extends TestCase
 
         $cache = $this->prophesize(CacheInterface::class);
         $cache->get(Argument::type('string'))->shouldBecalled()->willReturn(resolve($documentString));
+        $cache->remove(Argument::type('string'))->shouldBecalled();
 
         $options = [
             CacheMiddleware::class => [
