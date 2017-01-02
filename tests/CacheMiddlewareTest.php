@@ -172,6 +172,6 @@ final class CacheMiddlewareTest extends TestCase
         $responseObject = await($middleware->post($response, $options), Factory::create());
 
         self::assertSame($response->getStatusCode(), $responseObject->getStatusCode());
-        self::assertSame($response->getBody()->getContents(), $responseObject->getBody()->getContents());
+        self::assertSame($body, $responseObject->getBody()->getContents());
     }
 }
