@@ -4,17 +4,20 @@ namespace ApiClients\Middleware\Cache;
 
 use ApiClients\Foundation\Middleware\DefaultPriorityTrait;
 use ApiClients\Foundation\Middleware\MiddlewareInterface;
-use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\UriInterface;
 use React\Cache\CacheInterface;
 use React\Promise\CancellablePromiseInterface;
+use React\Promise\PromiseInterface;
+use RingCentral\Psr7\BufferStream;
+use function React\Promise\reject;
 use function React\Promise\resolve;
 
-class CacheMiddleware implements MiddlewareInterface
+final class CacheMiddleware implements MiddlewareInterface
 {
     use DefaultPriorityTrait;
+
+    const DEFAULT_GLUE = '/';
 
     /**
      * @var CacheInterface
@@ -27,12 +30,19 @@ class CacheMiddleware implements MiddlewareInterface
     private $key;
 
     /**
-     * @param CacheInterface$cache
+     * @var RequestInterface
      */
-    public function __construct(CacheInterface $cache)
-    {
-        $this->cache = $cache;
-    }
+    private $request;
+
+    /**
+     * @var bool
+     */
+    private $store = false;
+
+    /**
+     * @var StrategyInterface
+     */
+    private $strategy;
 
     /**
      * @param RequestInterface $request
@@ -41,34 +51,37 @@ class CacheMiddleware implements MiddlewareInterface
      */
     public function pre(RequestInterface $request, array $options = []): CancellablePromiseInterface
     {
+        if (!isset($options[self::class][Options::CACHE]) || !isset($options[self::class][Options::STRATEGY])) {
+            return resolve($request);
+        }
+        $this->cache = $options[self::class][Options::CACHE];
+        $this->strategy = $options[self::class][Options::STRATEGY];
+        if (!($this->cache instanceof CacheInterface) || !($this->strategy instanceof StrategyInterface)) {
+            return resolve($request);
+        }
+
         if ($request->getMethod() !== 'GET') {
             return resolve($request);
         }
 
-        $this->key = $this->determineCacheKey($request->getUri());
-        return $this->cache->get($this->key)->then(function (string $document) {
-            return resolve(
-                $this->buildResponse($document)
-            );
-        }, function () use ($request) {
-            return resolve($request);
-        });
-    }
-
-    /**
-     * @param string $document
-     * @return Response
-     */
-    protected function buildResponse(string $document): Response
-    {
-        $document = json_decode($document, true);
-        return new Response(
-            $document['status_code'],
-            $document['headers'],
-            $document['body'],
-            $document['protocol_version'],
-            $document['reason_phrase']
+        $this->request = $request;
+        $this->key = CacheKey::create(
+            $this->request->getUri(),
+            $options[self::class][Options::GLUE] ?? self::DEFAULT_GLUE
         );
+
+        return $this->cache->get($this->key)->then(function (string $json) {
+            $document = Document::createFromString($json);
+
+            if ($document->hasExpired()) {
+                $this->cache->remove($this->key);
+                return resolve($this->request);
+            }
+
+            return reject($document->getResponse());
+        }, function () {
+            return resolve($this->request);
+        });
     }
 
     /**
@@ -78,60 +91,43 @@ class CacheMiddleware implements MiddlewareInterface
      */
     public function post(ResponseInterface $response, array $options = []): CancellablePromiseInterface
     {
-        if (!is_string($this->key)) {
+        if (!($this->request instanceof RequestInterface)) {
             return resolve($response);
         }
 
-        $contents = (string)$response->getBody();
+        $this->store = $this->strategy->decide($this->request, $response);
 
-        $document = [
-            'body' => $contents,
-            'headers' => $response->getHeaders(),
-            'protocol_version' => $response->getProtocolVersion(),
-            'reason_phrase' => $response->getReasonPhrase(),
-            'status_code' => $response->getStatusCode(),
-        ];
+        if (!$this->store) {
+            return resolve($response);
+        }
 
-        $this->cache->set($this->key, json_encode($document));
+        return $this->hasBody($response)->then(function (ResponseInterface $response) {
+            $document = Document::createFromResponse(
+                $response,
+                $this->strategy->determineTtl(
+                    $this->request,
+                    $response
+                )
+            );
 
-        return resolve(
-            new Response(
-                $response->getStatusCode(),
-                $response->getHeaders(),
-                $contents,
-                $response->getProtocolVersion(),
-                $response->getReasonPhrase()
-            )
-        );
-    }
+            $this->cache->set($this->key, (string)$document);
 
-
-    /**
-     * @param UriInterface $uri
-     * @return string
-     */
-    protected function determineCacheKey(UriInterface $uri): string
-    {
-        return $this->stripExtraSlashes(
-            implode(
-                '/',
-                [
-                    (string)$uri->getScheme(),
-                    (string)$uri->getHost(),
-                    (string)$uri->getPort(),
-                    (string)$uri->getPath(),
-                    md5((string)$uri->getQuery()),
-                ]
-            )
-        );
+            return resolve($document->getResponse());
+        }, function () use ($response) {
+            return resolve($response);
+        });
     }
 
     /**
-     * @param string $string
-     * @return string
+     * @param ResponseInterface $response
+     * @return PromiseInterface
      */
-    protected function stripExtraSlashes(string $string): string
+    protected function hasBody(ResponseInterface $response): PromiseInterface
     {
-        return preg_replace('#/+#', '/', $string);
+        if ($response->getBody() instanceof BufferStream) {
+            return resolve($response);
+        }
+
+        return reject();
     }
 }

@@ -3,19 +3,23 @@
 namespace ApiClients\Tests\Middleware\Cache;
 
 use ApiClients\Middleware\Cache\CacheMiddleware;
+use ApiClients\Middleware\Cache\Document;
+use ApiClients\Middleware\Cache\Options;
+use ApiClients\Middleware\Cache\StrategyInterface;
 use ApiClients\Tools\TestUtilities\TestCase;
 use Prophecy\Argument;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\UriInterface;
 use React\Cache\CacheInterface;
-use function Clue\React\Block\await;
 use React\EventLoop\Factory;
-use React\Promise\FulfilledPromise;
-use React\Promise\RejectedPromise;
+use RingCentral\Psr7\BufferStream;
+use RingCentral\Psr7\Request;
+use RingCentral\Psr7\Response;
+use function Clue\React\Block\await;
+use function React\Promise\reject;
 use function React\Promise\resolve;
 
-class CacheMiddlewareTest extends TestCase
+final class CacheMiddlewareTest extends TestCase
 {
     public function providerMethod()
     {
@@ -27,27 +31,32 @@ class CacheMiddlewareTest extends TestCase
         yield ['LOLCAT'];
         yield [time()];
         yield [mt_rand()];
-        yield [mt_rand(0, time())];
-        yield [mt_rand(time(), time() * time())];
+        yield [random_int(0, time())];
+        yield [random_int(time(), time() * time())];
     }
 
     /**
      * @dataProvider providerMethod
      */
-    public function testNotGet(string $method)
+    public function testPreNoGet(string $method)
     {
+        $options = [
+            CacheMiddleware::class => [
+                Options::CACHE => $this->prophesize(CacheInterface::class)->reveal(),
+                Options::STRATEGY => $this->prophesize(StrategyInterface::class)->reveal(),
+            ],
+        ];
+
         $request = $this->prophesize(RequestInterface::class);
         $request->getMethod()->shouldBeCalled()->willReturn($method);
 
         $requestInstance = $request->reveal();
-        $cache = $this->prophesize(CacheInterface::class);
-        $cache->set(Argument::type('string'), Argument::type('string'))->shouldNotBeCalled();
-        $middleware = new CacheMiddleware($cache->reveal());
+        $middleware = new CacheMiddleware();
 
-        $this->assertSame(
+        self::assertSame(
             $requestInstance,
             await(
-                $middleware->pre($requestInstance),
+                $middleware->pre($requestInstance, $options),
                 Factory::create()
             )
         );
@@ -55,128 +64,115 @@ class CacheMiddlewareTest extends TestCase
         $middleware->post($this->prophesize(ResponseInterface::class)->reveal());
     }
 
-    public function provideUri()
+    public function testPreGetCache()
     {
-        $uri = $this->prophesize(UriInterface::class);
-        $uri->getScheme()->shouldBeCalled()->willReturn('https');
-        $uri->getHost()->shouldBeCalled()->willReturn('example.com');
-        $uri->getPort()->shouldBeCalled()->willReturn();
-        $uri->getPath()->shouldBeCalled()->willReturn('/');
-        $uri->getQuery()->shouldBeCalled()->willReturn('');
+        $documentString = (string)Document::createFromResponse(
+            new Response(123, [], 'foo.bar'),
+            5
+        );
+        $cache = $this->prophesize(CacheInterface::class);
+        $cache->get(Argument::type('string'))->shouldBecalled()->willReturn(resolve($documentString));
 
-        yield [$uri->reveal()];
+        $options = [
+            CacheMiddleware::class => [
+                Options::CACHE => $cache->reveal(),
+                Options::STRATEGY => $this->prophesize(StrategyInterface::class)->reveal(),
+            ],
+        ];
 
-        $uri = $this->prophesize(UriInterface::class);
-        $uri->getScheme()->shouldBeCalled()->willReturn('https');
-        $uri->getHost()->shouldBeCalled()->willReturn('example.com');
-        $uri->getPort()->shouldBeCalled()->willReturn();
-        $uri->getPath()->shouldBeCalled()->willReturn();
-        $uri->getQuery()->shouldBeCalled()->willReturn();
+        $request = new Request('GET', 'foo.bar');
 
-        yield [$uri->reveal()];
+        $response = null;
+        $middleware = new CacheMiddleware();
+        $middleware->pre($request, $options)->otherwise(function ($responseObject) use (&$response) {
+            $response = $responseObject;
+        });
+        self::assertNotNull($response);
 
-        $uri = $this->prophesize(UriInterface::class);
-        $uri->getScheme()->shouldBeCalled()->willReturn('https');
-        $uri->getHost()->shouldBeCalled()->willReturn('example.com');
-        $uri->getPort()->shouldBeCalled()->willReturn(80);
-        $uri->getPath()->shouldBeCalled()->willReturn('/');
-        $uri->getQuery()->shouldBeCalled()->willReturn('?blaat');
-
-        yield [$uri->reveal()];
+        self::assertSame(123, $response->getStatusCode());
+        self::assertSame('foo.bar', $response->getBody()->getContents());
     }
 
-    /**
-     * @dataProvider provideUri
-     */
-    public function testNotInCache(UriInterface $uri)
+    public function testPreGetNoCache()
     {
-        $request = $this->prophesize(RequestInterface::class);
-        $request->getUri()->shouldBeCalled()->willReturn($uri);
-        $request->getMethod()->shouldBeCalled()->willReturn('GET');
+        $request = new Request('GET', 'foo.bar');
 
-        $requestInstance = $request->reveal();
         $cache = $this->prophesize(CacheInterface::class);
-        $cache->get(Argument::type('string'))->shouldBeCalled()->willReturn(new RejectedPromise());
-        $middleware = new CacheMiddleware($cache->reveal());
+        $cache->get(Argument::type('string'))->shouldBecalled()->willReturn(reject());
 
-        $this->assertSame(
-            $requestInstance,
-            await(
-                $middleware->pre($requestInstance),
-                Factory::create()
-            )
-        );
+        $options = [
+            CacheMiddleware::class => [
+                Options::CACHE => $cache->reveal(),
+                Options::STRATEGY => $this->prophesize(StrategyInterface::class)->reveal(),
+            ],
+        ];
+
+        $middleware = new CacheMiddleware();
+        $response = await($middleware->pre($request, $options), Factory::create());
+
+        self::assertSame($request, $response);
     }
 
-    public function testInCache()
+    public function testPreGetExpired()
     {
-        $uri = $this->prophesize(UriInterface::class)->reveal();
-
-        $request = $this->prophesize(RequestInterface::class);
-        $request->getUri()->shouldBeCalled()->willReturn($uri);
-        $request->getMethod()->shouldBeCalled()->willReturn('GET');
-        $requestInstance = $request->reveal();
-
-        $document = '{"body":"foo","headers":[],"protocol_version":3.0,"reason_phrase":"w00t w00t","status_code":9001}';
-        $cache = $this->prophesize(CacheInterface::class);
-        $cache->get(Argument::type('string'))->shouldBeCalled()->willReturn(new FulfilledPromise($document));
-        $middleware = new CacheMiddleware($cache->reveal());
-
-        $response = await(
-            $middleware->pre($requestInstance)->then(null, function (ResponseInterface $response) {
-                return resolve($response);
-            }),
-            Factory::create()
+        $documentString = (string)Document::createFromResponse(
+            new Response(123, [], 'foo.bar'),
+            0
         );
 
-        $this->assertSame('foo', (string)$response->getBody());
-        $this->assertSame([], $response->getHeaders());
-        $this->assertSame(3.0, $response->getProtocolVersion());
-        $this->assertSame('w00t w00t', $response->getReasonPhrase());
-        $this->assertSame(9001, $response->getStatusCode());
+        sleep(2);
+
+        $cache = $this->prophesize(CacheInterface::class);
+        $cache->get(Argument::type('string'))->shouldBecalled()->willReturn(resolve($documentString));
+        $cache->remove(Argument::type('string'))->shouldBecalled();
+
+        $options = [
+            CacheMiddleware::class => [
+                Options::CACHE => $cache->reveal(),
+                Options::STRATEGY => $this->prophesize(StrategyInterface::class)->reveal(),
+            ],
+        ];
+
+        $request = new Request('GET', 'foo.bar');
+
+        $middleware = new CacheMiddleware();
+        $response = await($middleware->pre($request, $options), Factory::create());
+
+        self::assertSame($request, $response);
     }
 
-    public function testSaveCache()
+    public function testPost()
     {
+        $request = new Request('GET', 'foo.bar');
 
-        $uri = $this->prophesize(UriInterface::class);
-        $uri->getScheme()->shouldBeCalled()->willReturn('https');
-        $uri->getHost()->shouldBeCalled()->willReturn('example.com');
-        $uri->getPort()->shouldBeCalled()->willReturn();
-        $uri->getPath()->shouldBeCalled()->willReturn('/');
-        $uri->getQuery()->shouldBeCalled()->willReturn('');
-
-        $request = $this->prophesize(RequestInterface::class);
-        $request->getUri()->shouldBeCalled()->willReturn($uri->reveal());
-        $request->getMethod()->shouldBeCalled()->willReturn('GET');
-
-        $response = $this->prophesize(ResponseInterface::class);
-        $response->getBody()->shouldBeCalled()->willReturn('foo');
-        $response->getHeaders()->shouldBeCalled()->willReturn([]);
-        $response->getProtocolVersion()->shouldBeCalled()->willReturn(3.0);
-        $response->getReasonPhrase()->shouldBeCalled()->willReturn('w00t w00t');
-        $response->getStatusCode()->shouldBeCalled()->willReturn(9001);
-        $responseInstance = $response->reveal();
+        $body = 'foo.bar';
+        $stream = new BufferStream(strlen($body));
+        $stream->write($body);
+        $response = (new Response(200, []))->withBody($stream);
 
         $cache = $this->prophesize(CacheInterface::class);
-        $cache->get(Argument::type('string'))->shouldBeCalled()->willReturn(new RejectedPromise());
-        $cache->set(Argument::type('string'), Argument::any('string'))->shouldBeCalled();
-        $middleware = new CacheMiddleware($cache->reveal());
+        $cache->get(Argument::type('string'))->shouldBecalled()->willReturn(reject());
+        $cache->set(
+            Argument::type('string'),
+            Argument::type('string')
+        )->shouldBecalled();
 
-        await(
-            $middleware->pre($request->reveal()),
-            Factory::create()
-        );
+        $strategy = $this->prophesize(StrategyInterface::class);
+        $strategy->determineTtl(Argument::type(RequestInterface::class), Argument::type(ResponseInterface::class))->shouldBeCalled()->willReturn(true);
+        $strategy->decide(Argument::type(RequestInterface::class), Argument::type(ResponseInterface::class))->shouldBeCalled()->willReturn(true);
 
-        $processedResponse = await(
-            $middleware->post($responseInstance),
-            Factory::create()
-        );
+        $options = [
+            CacheMiddleware::class => [
+                Options::CACHE => $cache->reveal(),
+                Options::STRATEGY => $strategy->reveal(),
+            ],
+        ];
 
-        $this->assertSame('foo', (string)$processedResponse->getBody());
-        $this->assertSame([], $processedResponse->getHeaders());
-        $this->assertSame(3.0, $processedResponse->getProtocolVersion());
-        $this->assertSame('w00t w00t', $processedResponse->getReasonPhrase());
-        $this->assertSame(9001, $processedResponse->getStatusCode());
+        $middleware = new CacheMiddleware();
+        $middleware->pre($request, $options);
+        $responseObject = await($middleware->post($response, $options), Factory::create());
+
+        self::assertSame($response->getStatusCode(), $responseObject->getStatusCode());
+        self::assertSame($body, $responseObject->getBody()->getContents());
     }
 }
