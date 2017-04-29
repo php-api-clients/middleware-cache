@@ -3,6 +3,7 @@
 namespace ApiClients\Middleware\Cache;
 
 use ApiClients\Foundation\Middleware\DefaultPriorityTrait;
+use ApiClients\Foundation\Middleware\ErrorTrait;
 use ApiClients\Foundation\Middleware\MiddlewareInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -16,6 +17,7 @@ use function React\Promise\resolve;
 final class CacheMiddleware implements MiddlewareInterface
 {
     use DefaultPriorityTrait;
+    use ErrorTrait;
 
     const DEFAULT_GLUE = '/';
 
