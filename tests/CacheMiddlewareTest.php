@@ -56,12 +56,12 @@ final class CacheMiddlewareTest extends TestCase
         self::assertSame(
             $requestInstance,
             await(
-                $middleware->pre($requestInstance, $options),
+                $middleware->pre($requestInstance, 'abc', $options),
                 Factory::create()
             )
         );
 
-        $middleware->post($this->prophesize(ResponseInterface::class)->reveal());
+        $middleware->post($this->prophesize(ResponseInterface::class)->reveal(), 'abc');
     }
 
     public function testPreGetCache()
@@ -84,7 +84,7 @@ final class CacheMiddlewareTest extends TestCase
 
         $response = null;
         $middleware = new CacheMiddleware();
-        $middleware->pre($request, $options)->otherwise(function ($responseObject) use (&$response) {
+        $middleware->pre($request, 'abc', $options)->otherwise(function ($responseObject) use (&$response) {
             $response = $responseObject;
         });
         self::assertNotNull($response);
@@ -108,7 +108,7 @@ final class CacheMiddlewareTest extends TestCase
         ];
 
         $middleware = new CacheMiddleware();
-        $response = await($middleware->pre($request, $options), Factory::create());
+        $response = await($middleware->pre($request, 'abc', $options), Factory::create());
 
         self::assertSame($request, $response);
     }
@@ -136,7 +136,7 @@ final class CacheMiddlewareTest extends TestCase
         $request = new Request('GET', 'foo.bar');
 
         $middleware = new CacheMiddleware();
-        $response = await($middleware->pre($request, $options), Factory::create());
+        $response = await($middleware->pre($request, 'abc', $options), Factory::create());
 
         self::assertSame($request, $response);
     }
@@ -169,8 +169,8 @@ final class CacheMiddlewareTest extends TestCase
         ];
 
         $middleware = new CacheMiddleware();
-        $middleware->pre($request, $options);
-        $responseObject = await($middleware->post($response, $options), Factory::create());
+        $middleware->pre($request, 'abc', $options);
+        $responseObject = await($middleware->post($response, 'abc', $options), Factory::create());
 
         self::assertSame($response->getStatusCode(), $responseObject->getStatusCode());
         self::assertSame($body, $responseObject->getBody()->getContents());

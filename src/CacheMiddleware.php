@@ -13,36 +13,34 @@ use React\Promise\PromiseInterface;
 use RingCentral\Psr7\BufferStream;
 use function React\Promise\reject;
 use function React\Promise\resolve;
+use Throwable;
 
 final class CacheMiddleware implements MiddlewareInterface
 {
-    use DefaultPriorityTrait;
-    use ErrorTrait;
-
     const DEFAULT_GLUE = '/';
 
     /**
-     * @var CacheInterface
+     * @var CacheInterface[]
      */
     private $cache;
 
     /**
-     * @var string
+     * @var string[]
      */
     private $key;
 
     /**
-     * @var RequestInterface
+     * @var RequestInterface[]
      */
     private $request;
 
     /**
-     * @var bool
+     * @var bool[]
      */
     private $store = false;
 
     /**
-     * @var StrategyInterface
+     * @var StrategyInterface[]
      */
     private $strategy;
 
@@ -51,38 +49,44 @@ final class CacheMiddleware implements MiddlewareInterface
      * @param array $options
      * @return CancellablePromiseInterface
      */
-    public function pre(RequestInterface $request, array $options = []): CancellablePromiseInterface
-    {
+    public function pre(
+        RequestInterface $request,
+        string $transactionId,
+        array $options = []
+    ): CancellablePromiseInterface {
         if (!isset($options[self::class][Options::CACHE]) || !isset($options[self::class][Options::STRATEGY])) {
             return resolve($request);
         }
-        $this->cache = $options[self::class][Options::CACHE];
-        $this->strategy = $options[self::class][Options::STRATEGY];
-        if (!($this->cache instanceof CacheInterface) || !($this->strategy instanceof StrategyInterface)) {
+        $this->cache[$transactionId] = $options[self::class][Options::CACHE];
+        $this->strategy[$transactionId] = $options[self::class][Options::STRATEGY];
+        if (!($this->cache[$transactionId] instanceof CacheInterface) ||
+            !($this->strategy[$transactionId] instanceof StrategyInterface)
+        ) {
             return resolve($request);
         }
 
         if ($request->getMethod() !== 'GET') {
+            $this->cleanUpTransaction($transactionId);
             return resolve($request);
         }
 
-        $this->request = $request;
-        $this->key = CacheKey::create(
-            $this->request->getUri(),
+        $this->request[$transactionId] = $request;
+        $this->key[$transactionId] = CacheKey::create(
+            $this->request[$transactionId]->getUri(),
             $options[self::class][Options::GLUE] ?? self::DEFAULT_GLUE
         );
 
-        return $this->cache->get($this->key)->then(function (string $json) {
+        return $this->cache[$transactionId]->get($this->key[$transactionId])->then(function (string $json) use ($transactionId) {
             $document = Document::createFromString($json);
 
             if ($document->hasExpired()) {
-                $this->cache->remove($this->key);
-                return resolve($this->request);
+                $this->cache[$transactionId]->remove($this->key[$transactionId]);
+                return resolve($this->request[$transactionId]);
             }
 
             return reject($document->getResponse());
-        }, function () {
-            return resolve($this->request);
+        }, function () use ($transactionId) {
+            return resolve($this->request[$transactionId]);
         });
     }
 
@@ -91,34 +95,54 @@ final class CacheMiddleware implements MiddlewareInterface
      * @param array $options
      * @return CancellablePromiseInterface
      */
-    public function post(ResponseInterface $response, array $options = []): CancellablePromiseInterface
-    {
-        if (!($this->request instanceof RequestInterface)) {
+    public function post(
+        ResponseInterface $response,
+        string $transactionId,
+        array $options = []
+    ): CancellablePromiseInterface {
+        if (!isset($this->request[$transactionId]) ||
+            !($this->request[$transactionId] instanceof RequestInterface)
+        ) {
+            $this->cleanUpTransaction($transactionId);
             return resolve($response);
         }
 
-        $this->store = $this->strategy->decide($this->request, $response);
+        $this->store[$transactionId] = $this->strategy[$transactionId]->
+            decide($this->request[$transactionId], $response);
 
-        if (!$this->store) {
+        if (!$this->store[$transactionId]) {
+            $this->cleanUpTransaction($transactionId);
             return resolve($response);
         }
 
-        return $this->hasBody($response)->then(function (ResponseInterface $response) {
+        return $this->hasBody($response)->then(function (ResponseInterface $response) use ($transactionId) {
             $document = Document::createFromResponse(
                 $response,
-                $this->strategy->determineTtl(
-                    $this->request,
+                $this->strategy[$transactionId]->determineTtl(
+                    $this->request[$transactionId],
                     $response
                 )
             );
 
-            $this->cache->set($this->key, (string)$document);
+            $this->cache[$transactionId]->set($this->key[$transactionId], (string)$document);
 
             return resolve($document->getResponse());
         }, function () use ($response) {
             return resolve($response);
+        })->always(function () use ($transactionId) {
+            $this->cleanUpTransaction($transactionId);
         });
     }
+
+    public function error(
+        Throwable $throwable,
+        string $transactionId,
+        array $options = []
+    ): CancellablePromiseInterface {
+        $this->cleanUpTransaction($transactionId);
+        return reject($throwable);
+    }
+
 
     /**
      * @param ResponseInterface $response
@@ -131,5 +155,28 @@ final class CacheMiddleware implements MiddlewareInterface
         }
 
         return reject();
+    }
+
+    protected function cleanUpTransaction(string $transactionId)
+    {
+        if (isset($this->cache[$transactionId])) {
+            unset($this->cache[$transactionId]);
+        }
+
+        if (isset($this->strategy[$transactionId])) {
+            unset($this->strategy[$transactionId]);
+        }
+
+        if (isset($this->request[$transactionId])) {
+            unset($this->request[$transactionId]);
+        }
+
+        if (isset($this->key[$transactionId])) {
+            unset($this->key[$transactionId]);
+        }
+
+        if (isset($this->store[$transactionId])) {
+            unset($this->store[$transactionId]);
+        }
     }
 }
