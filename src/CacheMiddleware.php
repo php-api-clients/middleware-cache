@@ -76,7 +76,9 @@ final class CacheMiddleware implements MiddlewareInterface
             $options[self::class][Options::GLUE] ?? self::DEFAULT_GLUE
         );
 
-        return $this->cache[$transactionId]->get($this->key[$transactionId])->then(function (string $json) use ($transactionId) {
+        return $this->cache[$transactionId]->get(
+            $this->key[$transactionId]
+        )->then(function (string $json) use ($transactionId) {
             $document = Document::createFromString($json);
 
             if ($document->hasExpired()) {
