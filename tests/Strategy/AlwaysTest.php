@@ -7,9 +7,12 @@ use ApiClients\Tools\TestUtilities\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
+/**
+ * @internal
+ */
 final class AlwaysTest extends TestCase
 {
-    public function testDecide()
+    public function testDecide(): void
     {
         self::assertTrue(
             (new Always())->decide(
@@ -40,7 +43,7 @@ final class AlwaysTest extends TestCase
     /**
      * @dataProvider provideTtl
      */
-    public function testDetermineTtl(int $expectedTtl, int $ttl)
+    public function testDetermineTtl(int $expectedTtl, int $ttl): void
     {
         self::assertSame(
             $expectedTtl,
@@ -52,7 +55,7 @@ final class AlwaysTest extends TestCase
         );
     }
 
-    public function testDetermineTtlDefault()
+    public function testDetermineTtlDefault(): void
     {
         self::assertSame(
             Always::ALWAYS_TTL,

@@ -19,6 +19,9 @@ use function Clue\React\Block\await;
 use function React\Promise\reject;
 use function React\Promise\resolve;
 
+/**
+ * @internal
+ */
 final class CacheMiddlewareTest extends TestCase
 {
     public function providerMethod()
@@ -29,16 +32,16 @@ final class CacheMiddlewareTest extends TestCase
         yield ['PATCH'];
         yield ['OPTIONS'];
         yield ['LOLCAT'];
-        yield [time()];
-        yield [mt_rand()];
-        yield [random_int(0, time())];
-        yield [random_int(time(), time() * time())];
+        yield [\time()];
+        yield [\mt_rand()];
+        yield [\random_int(0, \time())];
+        yield [\random_int(\time(), \time() * \time())];
     }
 
     /**
      * @dataProvider providerMethod
      */
-    public function testPreNoGet(string $method)
+    public function testPreNoGet(string $method): void
     {
         $options = [
             CacheMiddleware::class => [
@@ -64,7 +67,7 @@ final class CacheMiddlewareTest extends TestCase
         $middleware->post($this->prophesize(ResponseInterface::class)->reveal(), 'abc');
     }
 
-    public function testPreGetCache()
+    public function testPreGetCache(): void
     {
         $documentString = (string)Document::createFromResponse(
             new Response(123, [], 'foo.bar'),
@@ -84,7 +87,7 @@ final class CacheMiddlewareTest extends TestCase
 
         $response = null;
         $middleware = new CacheMiddleware();
-        $middleware->pre($request, 'abc', $options)->otherwise(function ($responseObject) use (&$response) {
+        $middleware->pre($request, 'abc', $options)->otherwise(function ($responseObject) use (&$response): void {
             $response = $responseObject;
         });
         self::assertNotNull($response);
@@ -93,7 +96,7 @@ final class CacheMiddlewareTest extends TestCase
         self::assertSame('foo.bar', $response->getBody()->getContents());
     }
 
-    public function testPreGetNoCache()
+    public function testPreGetNoCache(): void
     {
         $request = new Request('GET', 'foo.bar');
 
@@ -113,14 +116,14 @@ final class CacheMiddlewareTest extends TestCase
         self::assertSame($request, $response);
     }
 
-    public function testPreGetExpired()
+    public function testPreGetExpired(): void
     {
         $documentString = (string)Document::createFromResponse(
             new Response(123, [], 'foo.bar'),
             0
         );
 
-        sleep(2);
+        \sleep(2);
 
         $cache = $this->prophesize(CacheInterface::class);
         $cache->get(Argument::type('string'))->shouldBecalled()->willReturn(resolve($documentString));
@@ -141,12 +144,12 @@ final class CacheMiddlewareTest extends TestCase
         self::assertSame($request, $response);
     }
 
-    public function testPost()
+    public function testPost(): void
     {
         $request = new Request('GET', 'foo.bar');
 
         $body = 'foo.bar';
-        $stream = new BufferStream(strlen($body));
+        $stream = new BufferStream(\strlen($body));
         $stream->write($body);
         $response = (new Response(200, []))->withBody($stream);
 
