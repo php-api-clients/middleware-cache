@@ -2,8 +2,6 @@
 
 namespace ApiClients\Middleware\Cache;
 
-use ApiClients\Foundation\Middleware\DefaultPriorityTrait;
-use ApiClients\Foundation\Middleware\ErrorTrait;
 use ApiClients\Foundation\Middleware\MiddlewareInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -11,9 +9,9 @@ use React\Cache\CacheInterface;
 use React\Promise\CancellablePromiseInterface;
 use React\Promise\PromiseInterface;
 use RingCentral\Psr7\BufferStream;
+use Throwable;
 use function React\Promise\reject;
 use function React\Promise\resolve;
-use Throwable;
 
 final class CacheMiddleware implements MiddlewareInterface
 {
@@ -45,8 +43,8 @@ final class CacheMiddleware implements MiddlewareInterface
     private $strategy;
 
     /**
-     * @param RequestInterface $request
-     * @param array $options
+     * @param  RequestInterface            $request
+     * @param  array                       $options
      * @return CancellablePromiseInterface
      */
     public function pre(
@@ -67,6 +65,7 @@ final class CacheMiddleware implements MiddlewareInterface
 
         if ($request->getMethod() !== 'GET') {
             $this->cleanUpTransaction($transactionId);
+
             return resolve($request);
         }
 
@@ -83,6 +82,7 @@ final class CacheMiddleware implements MiddlewareInterface
 
             if ($document->hasExpired()) {
                 $this->cache[$transactionId]->remove($this->key[$transactionId]);
+
                 return resolve($this->request[$transactionId]);
             }
 
@@ -93,8 +93,8 @@ final class CacheMiddleware implements MiddlewareInterface
     }
 
     /**
-     * @param ResponseInterface $response
-     * @param array $options
+     * @param  ResponseInterface           $response
+     * @param  array                       $options
      * @return CancellablePromiseInterface
      */
     public function post(
@@ -106,6 +106,7 @@ final class CacheMiddleware implements MiddlewareInterface
             !($this->request[$transactionId] instanceof RequestInterface)
         ) {
             $this->cleanUpTransaction($transactionId);
+
             return resolve($response);
         }
 
@@ -114,6 +115,7 @@ final class CacheMiddleware implements MiddlewareInterface
 
         if (!$this->store[$transactionId]) {
             $this->cleanUpTransaction($transactionId);
+
             return resolve($response);
         }
 
@@ -131,7 +133,7 @@ final class CacheMiddleware implements MiddlewareInterface
             return resolve($document->getResponse());
         }, function () use ($response) {
             return resolve($response);
-        })->always(function () use ($transactionId) {
+        })->always(function () use ($transactionId): void {
             $this->cleanUpTransaction($transactionId);
         });
     }
@@ -142,15 +144,15 @@ final class CacheMiddleware implements MiddlewareInterface
         array $options = []
     ): CancellablePromiseInterface {
         $this->cleanUpTransaction($transactionId);
+
         return reject($throwable);
     }
 
-
     /**
-     * @param ResponseInterface $response
+     * @param  ResponseInterface $response
      * @return PromiseInterface
      */
-    protected function hasBody(ResponseInterface $response): PromiseInterface
+    private function hasBody(ResponseInterface $response): PromiseInterface
     {
         if ($response->getBody() instanceof BufferStream) {
             return resolve($response);
@@ -159,7 +161,7 @@ final class CacheMiddleware implements MiddlewareInterface
         return reject();
     }
 
-    protected function cleanUpTransaction(string $transactionId)
+    private function cleanUpTransaction(string $transactionId): void
     {
         if (isset($this->cache[$transactionId])) {
             unset($this->cache[$transactionId]);
