@@ -15,7 +15,7 @@
     "ringcentral/psr7": "^1.2"
   },
   "require-dev": {
-    "api-clients/test-utilities": "^5.2.0"
+    "api-clients/test-utilities": "^5.4.0"
   },
   "suggest": {
     "wyrihaximus/react-cache-filesystem": "Filesystem cache",
