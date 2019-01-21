@@ -7,17 +7,17 @@ use ApiClients\Middleware\Cache\Document;
 use ApiClients\Middleware\Cache\Options;
 use ApiClients\Middleware\Cache\StrategyInterface;
 use ApiClients\Tools\TestUtilities\TestCase;
+use function Clue\React\Block\await;
 use Prophecy\Argument;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use React\Cache\CacheInterface;
 use React\EventLoop\Factory;
+use function React\Promise\reject;
+use function React\Promise\resolve;
 use RingCentral\Psr7\BufferStream;
 use RingCentral\Psr7\Request;
 use RingCentral\Psr7\Response;
-use function Clue\React\Block\await;
-use function React\Promise\reject;
-use function React\Promise\resolve;
 
 /**
  * @internal

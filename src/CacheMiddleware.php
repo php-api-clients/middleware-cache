@@ -8,10 +8,10 @@ use Psr\Http\Message\ResponseInterface;
 use React\Cache\CacheInterface;
 use React\Promise\CancellablePromiseInterface;
 use React\Promise\PromiseInterface;
-use RingCentral\Psr7\BufferStream;
-use Throwable;
 use function React\Promise\reject;
 use function React\Promise\resolve;
+use RingCentral\Psr7\BufferStream;
+use Throwable;
 
 final class CacheMiddleware implements MiddlewareInterface
 {
