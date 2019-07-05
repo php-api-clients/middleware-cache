@@ -11,7 +11,7 @@
   "require": {
     "php": "^7.0",
     "api-clients/middleware": "^4.0",
-    "react/cache": "^0.4.1",
+    "react/cache": "^0.4.1 || ^0.6.0",
     "ringcentral/psr7": "^1.2"
   },
   "require-dev": {
