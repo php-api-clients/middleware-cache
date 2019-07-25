@@ -32,10 +32,6 @@ final class CacheMiddlewareTest extends TestCase
         yield ['PATCH'];
         yield ['OPTIONS'];
         yield ['LOLCAT'];
-        yield [\time()];
-        yield [\mt_rand()];
-        yield [\random_int(0, \time())];
-        yield [\random_int(\time(), \time() * \time())];
     }
 
     /**
@@ -127,7 +123,7 @@ final class CacheMiddlewareTest extends TestCase
 
         $cache = $this->prophesize(CacheInterface::class);
         $cache->get(Argument::type('string'))->shouldBecalled()->willReturn(resolve($documentString));
-        $cache->remove(Argument::type('string'))->shouldBecalled();
+        $cache->delete(Argument::type('string'))->shouldBecalled();
 
         $options = [
             CacheMiddleware::class => [
